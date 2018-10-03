@@ -1,0 +1,26 @@
+{
+	"cache_dir": "/home/jgbishop/borngeek.com/comics/cache",
+	"cache_url": "https://borngeek.com/comics/cache/",
+	"feed_dir": "/home/jgbishop/borngeek.com/comics",
+	"comics": [
+		{
+			"name": "Baby Blues",
+		},
+		{
+			"name": "Bizarro",
+		},
+		{
+			"name": "Mutts",
+		},
+		{
+			"name": "Prince Valiant",
+			"schedule": ["Sunday"]
+		},
+		{
+			"name": "Rhymes With Orange",
+		},
+		{
+			"name": "Sally Forth",
+		}
+	]
+}
