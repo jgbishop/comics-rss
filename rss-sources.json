@@ -4,23 +4,23 @@
 	"feed_dir": "/home/jgbishop/borngeek.com/comics",
 	"comics": [
 		{
-			"name": "Baby Blues",
+			"name": "Baby Blues"
 		},
 		{
-			"name": "Bizarro",
+			"name": "Bizarro"
 		},
 		{
-			"name": "Mutts",
+			"name": "Mutts"
 		},
 		{
 			"name": "Prince Valiant",
 			"schedule": ["Sunday"]
 		},
 		{
-			"name": "Rhymes With Orange",
+			"name": "Rhymes With Orange"
 		},
 		{
-			"name": "Sally Forth",
+			"name": "Sally Forth"
 		}
 	]
 }
