@@ -159,15 +159,3 @@ for entry in config.get('comics', []):
     feed_path = os.path.join(feed_dir, "{}.xml".format(slug))
     with open(feed_path, "w") as feed_file:
         feed_file.write(feed.rss())
-
-# Clean up any "expired" files from our cache directory
-# items = os.listdir(cache_path)
-# for x in items:
-#     xpath = os.path.join(cache_path, x)
-
-#     if not os.isfile(xpath):
-#         continue  # Skip directories
-
-#     # Only handle GIF files for now, since that's what the site creates
-#     if x.endswith(".gif") and x not in images_processed:
-#         os.remove(xpath)
