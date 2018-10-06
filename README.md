@@ -30,20 +30,20 @@ The configuration file (_rss-sources.json_) has the following components that
 need to be filled out. Note that this is a JSON file, so JSON syntax is
 expected.
 
-**cache_dir**
+**cache_dir**  
 The absoute path to a folder in which cached copies of the comic images will
 live. This path should be internet visible (the feeds themselves will include
 these images in them). Example: `/home/myuser/mywebsite.com/comics/cache`
 
-**cache_url**
+**cache_url**  
 The absolute URL that corresponds to the cache folder above (internet visible).
 Example: `https://mywebsite.com/comics/cache/`
 
-**feed_dir**
+**feed_dir**  
 The absolute path to a folder in which the RSS feeds themselves will live.
 Example: `/home/myuser/mywebsite.com/comics`
 
-**comics**
+**comics**  
 A list of objects, each of which defines the comic to parse. Available fields
 for these are listed in the corresponding section below.
 
@@ -51,15 +51,15 @@ for these are listed in the corresponding section below.
 
 Each entry in the `comics` configuration list can contain the following items:
 
-**name** (Required)
+**name** (Required)  
 The name of the comic strip. Used to identify the feed, as well as to generate
 the path to the comic strip.
 
-**slug** (Optional)
+**slug** (Optional)  
 The slug of the comic strip. If not provided, the name field is automatically
 converted into a slug (e.g. "Prince Valiant" becomes "prince-valiant").
 
-**schedule** (Optional)
+**schedule** (Optional)  
 A list of weekday names on which the comic should be loaded. If no schedule is
 provided, the script will assume the comic strip is a daily, and will generate
 an entry each day. Example: `"schedule": ["Sunday"]`
@@ -69,12 +69,12 @@ an entry each day. Example: `"schedule": ["Sunday"]`
 Here's a typical daily strip:
 
     {
-    	"name": "Sally Forth"
+        "name": "Sally Forth"
     }
 
 Here's a strip that only runs on Sundays:
 
-	{
-		"name": "Prince Valiant",
-		"schedule": ["Sunday"]
-	}
+    {
+        "name": "Prince Valiant",
+        "schedule": ["Sunday"]
+    }
