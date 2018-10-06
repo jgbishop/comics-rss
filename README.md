@@ -1,6 +1,79 @@
 # RSS Feed Generator for King Features
 
-King Features stupidly doesn't provide RSS feeds for its comic strips, so I 
-wrote a generator. This project allows users to generate RSS feeds for the
-comics of their choice at the [King Features](http://kingfeatures.com/)
-website.
+This project allows users to generate RSS feeds for the comics of their choice
+at the [King Features](http://kingfeatures.com/) website (which does not
+provide such feeds).
+
+## Requirements
+
+This is a Python 3 script which relies on the following few third-party
+libraries:
+
+* BeautifulSoup
+* pytz
+* requests
+* rfeed
+* slugify
+
+## Installation
+
+1. Clone this repo to a folder of your choice.
+2. Update the configuration file (_rss-sources.json_) to your liking (see below
+for more on how to do this).
+3. Set up a cron job to run the script once per day.
+4. Enjoy!
+
+## Configuration
+
+The configuration file (_rss-sources.json_) has the following components that
+need to be filled out. Note that this is a JSON file, so JSON syntax is
+expected.
+
+**cache_dir**
+The absoute path to a folder in which cached copies of the comic images will
+live. This path should be internet visible (the feeds themselves will include
+these images in them). Example: `/home/myuser/mywebsite.com/comics/cache`
+
+**cache_url**
+The absolute URL that corresponds to the cache folder above (internet visible).
+Example: `https://mywebsite.com/comics/cache/`
+
+**feed_dir**
+The absolute path to a folder in which the RSS feeds themselves will live.
+Example: `/home/myuser/mywebsite.com/comics`
+
+**comics**
+A list of objects, each of which defines the comic to parse. Available fields
+for these are listed in the corresponding section below.
+
+## Comics Configuration
+
+Each entry in the `comics` configuration list can contain the following items:
+
+**name** (Required)
+The name of the comic strip. Used to identify the feed, as well as to generate
+the path to the comic strip.
+
+**slug** (Optional)
+The slug of the comic strip. If not provided, the name field is automatically
+converted into a slug (e.g. "Prince Valiant" becomes "prince-valiant").
+
+**schedule** (Optional)
+A list of weekday names on which the comic should be loaded. If no schedule is
+provided, the script will assume the comic strip is a daily, and will generate
+an entry each day. Example: `"schedule": ["Sunday"]`
+
+### Example Configurations
+
+Here's a typical daily strip:
+
+    {
+    	"name": "Sally Forth"
+    }
+
+Here's a strip that only runs on Sundays:
+
+	{
+		"name": "Prince Valiant",
+		"schedule": ["Sunday"]
+	}

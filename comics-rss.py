@@ -14,6 +14,9 @@ from slugify import slugify
 from urllib.request import urlopen
 
 
+VERSION = "1.0.0"
+
+
 def get_image(url, filename):
     print(" - Attempting to get image: {}".format(filename))
     try:
