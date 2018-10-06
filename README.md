@@ -6,8 +6,7 @@ provide such feeds).
 
 ## Requirements
 
-This is a Python 3 script which relies on the following few third-party
-libraries:
+This is a Python 3 script which relies on the following third-party libraries:
 
 * BeautifulSoup
 * pytz
@@ -18,10 +17,12 @@ libraries:
 ## Installation
 
 1. Clone this repo to a folder of your choice.
-2. Update the configuration file (_rss-sources.json_) to your liking (see below
+2. Copy the configuration file template (_rss-sources-template.json_) to a new
+file named _rss-sources.json_.
+3. Update the configuration file (_rss-sources.json_) to your liking (see below
 for more on how to do this).
-3. Set up a cron job to run the script once per day.
-4. Enjoy!
+4. Set up a cron job to run the script once per day.
+5. Enjoy!
 
 ## Configuration
 
