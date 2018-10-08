@@ -26,26 +26,33 @@ for more on how to do this).
 
 ## Configuration
 
-The configuration file (_rss-sources.json_) has the following components that
-need to be filled out. Note that this is a JSON file, so JSON syntax is
-expected.
+The configuration file (_rss-sources-template.json_) has the following
+components that need to be filled out. Note that this is a JSON file, so JSON
+syntax is expected.
 
-**cache_dir**  
-The absoute path to a folder in which cached copies of the comic images will
-live. This path should be internet visible (the feeds themselves will include
-these images in them). Example: `/home/myuser/mywebsite.com/comics/cache`
-
-**cache_url**  
-The absolute URL that corresponds to the cache folder above (internet visible).
-Example: `https://mywebsite.com/comics/cache/`
-
-**feed_dir**  
+**feed_dir** (Required)  
 The absolute path to a folder in which the RSS feeds themselves will live.
 Example: `/home/myuser/mywebsite.com/comics`
 
-**comics**  
+**feed_url** (Required)  
+The absolute URL that corresponds to the RSS feed directory above (internet
+visible). Example: `https://mywebsite.com/comics`
+
+**comics** (Required)  
 A list of objects, each of which defines the comic to parse. Available fields
 for these are listed in the corresponding section below.
+
+**cache_dir** (Optional)  
+The absoute path to a folder in which cached copies of the comic images will
+live. This path should be internet visible (the feeds themselves will include
+these images in them). If not provided, a `cache` folder will be created as a
+subfolder of the path specified by **feed_dir**. Example:
+`/home/myuser/mywebsite.com/comics/cache`
+
+**cache_url** (Optional)  
+The absolute URL that corresponds to the cache folder above (internet visible).
+If not provided, a `cache` subfolder will be added to the `feed_url` value.
+Example: `https://mywebsite.com/comics/cache/`
 
 ## Comics Configuration
 

@@ -1,7 +1,6 @@
 {
-    "cache_dir": "/home/myuser/mywebsite.com/comics/cache",
-    "cache_url": "https://mywebsite.com/comics/cache/",
     "feed_dir": "/home/myuser/mywebsite.com/comics",
+    "feed_url": "https://mywebsite.com/comics",
     "comics": [
         {
             "name": "Baby Blues"

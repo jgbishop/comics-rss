@@ -4,6 +4,7 @@ import json
 import os
 import pytz
 import rfeed
+import sys
 
 from bs4 import BeautifulSoup
 from contextlib import closing
@@ -14,6 +15,7 @@ from slugify import slugify
 from urllib.request import urlopen
 
 
+MIN_PYTHON = (3, 4)
 VERSION = "1.0.0"
 
 
@@ -21,7 +23,7 @@ def get_image(url, filename):
     print(" - Attempting to get image: {}".format(filename))
     try:
         with closing(get(url, stream=True)) as resp:
-            if(resp.status_code == 200):
+            if resp.status_code == 200:
                 raw_html = resp.content
             else:
                 print("ERROR: Bad response getting page ()".format(
@@ -38,7 +40,7 @@ def get_image(url, filename):
 
     response = urlopen(short_link['content'])
     data_response = get(response.url)
-    if(data_response.status_code == 200):
+    if data_response.status_code == 200:
         print("   Got success response code; writing image content")
         output = open(filename, "wb")
         output.write(data_response.content)
@@ -53,9 +55,13 @@ def get_image(url, filename):
         return None
 
 
-github_url = 'https://github.com/jgbishop/comics-rss'
-root_url = "https://comicskingdom.com/"
+if sys.version_info < MIN_PYTHON:
+    sys.exit()
 
+github_url = 'https://github.com/jgbishop/comics-rss'
+root_url = "https://comicskingdom.com"
+
+# Handle script arguments
 parser = argparse.ArgumentParser()
 parser.add_argument('--file', default='rss-sources.json')
 args = parser.parse_args()
@@ -69,32 +75,63 @@ today = date.today()
 with open(args.file) as f:
     config = json.load(f)
 
+# Make sure we have everything we expect
+errors = []
+for x in ('feed_dir', 'feed_url'):
+    if not config.get(x, ""):
+        errors.append("ERROR: Missing the {} configuration directive".format(x))
+    else:
+        # Strip trailing slashes from file system paths and URLs
+        config[x] = config[x].rstrip('/')
+
+if errors:
+    sys.exit("\n".join(errors))
+
+# Setup the cache paths and URLs
+if not config.get('cache_dir', ''):
+    config['cache_dir'] = "{}/cache".format(config['feed_dir'])
+elif config.get('cache_dir').endswith('/'):
+    config['cache_dir'] = config['cache_dir'].rstrip('/')
+
+if not config.get('cache_url', ''):
+    config['cache_url'] = "{}/cache".format(config['feed_url'])
+elif config.get('cache_url').endswith('/'):
+    config['cache_url'] = config['cache_url'].rstrip('/')
+
 # Create the cache directory
-cache_dir = config.get('cache_dir', './cache')
+cache_dir = config.get('cache_dir')
 
-if(cache_dir.startswith('/')):
-    cache_path = cache_dir
-else:
-    cache_path = os.path.join(cwd, cache_dir)
+if not cache_dir.startswith('/'):
+    cache_dir = os.path.join(cwd, cache_dir)
 
-os.makedirs(cache_path, exist_ok=True)
+try:
+    os.makedirs(cache_dir, exist_ok=True)
+except OSError as e:
+    sys.exit("Failed to create {}: {}".format(cache_dir, str(e)))
 
-# Create the feeds directory
-feed_dir = config.get('feed_dir', cwd)
-os.makedirs(feed_dir, exist_ok=True)
+# Create the feeds directory (in case it's different)
+feed_dir = config.get('feed_dir')
+if not feed_dir.startswith('/'):
+    feed_dir = os.path.join(cwd, feed_dir)
 
+try:
+    os.makedirs(feed_dir, exist_ok=True)
+except OSError as e:
+    sys.exit("Failed to create {}: {}".format(feed_dir, str(e)))
+
+# Process the comics that we read from the config
 images_processed = {}
-
-# Process what we read from the config
 for entry in config.get('comics', []):
+    if not entry.get('name', ''):
+        print("WARNING: Skipping comics entry with no name field")
+        continue
+
     slug = entry.get('slug', '')
     if not slug:
         slug = slugify(entry.get('name'))
 
-    images_processed.setdefault(slug, set())
-
     print("Processing comic: {}".format(slug))
-
+    images_processed.setdefault(slug, set())
     item_list = []
 
     last_stop = 15
@@ -112,12 +149,12 @@ for entry in config.get('comics', []):
         img_filename = "{}-{}.gif".format(slug, the_date.isoformat())
         images_processed[slug].add(img_filename)
 
-        url = "{}{}/{}".format(
+        url = "{}/{}/{}".format(
             root_url, slug, the_date.isoformat()
         )
 
         # Check to see if we need to fetch the image
-        img_path = os.path.join(cache_path, img_filename)
+        img_path = os.path.join(cache_dir, img_filename)
         if not os.path.isfile(img_path):
             get_image(url, img_path)
 
@@ -125,7 +162,7 @@ for entry in config.get('comics', []):
             entry.get("name"), the_date.strftime("%B %d, %Y")
         )
 
-        img_url = "{}{}".format(config.get("cache_url"), img_filename)
+        img_url = "{}/{}".format(config.get("cache_url"), img_filename)
         clines = []
         clines.append('<p><img src="{}" alt="{}"></p>'.format(img_url, title))
         clines.append('<p>')
@@ -140,7 +177,6 @@ for entry in config.get('comics', []):
             title=title,
             link=url,
             description='\n'.join(clines),
-            author="feedgen@borngeek.com (Jonah Bishop)",
             guid=rfeed.Guid(url),
             pubDate=pubtime
         )
@@ -149,11 +185,12 @@ for entry in config.get('comics', []):
     # Start building the feed
     feed = rfeed.Feed(
         title=entry.get('name'),
-        link="{}{}".format(root_url, slug),
+        link="{}/{}".format(root_url, slug),
         description="RSS feed for {}".format(entry.get('name')),
         language='en-US',
         lastBuildDate=datetime.now(),
-        items=item_list
+        items=item_list,
+        generator="comics-rss.py ({})".format(github_url),
     )
 
     feed_path = os.path.join(feed_dir, "{}.xml".format(slug))
