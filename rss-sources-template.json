@@ -1,4 +1,5 @@
 {
+    "expires": 25,
     "feed_dir": "/home/myuser/mywebsite.com/comics",
     "feed_url": "https://mywebsite.com/comics",
     "comics": [

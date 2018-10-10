@@ -1,8 +1,10 @@
 import argparse
 import calendar
+import glob
 import json
 import os
 import pytz
+import re
 import rfeed
 import sys
 
@@ -119,6 +121,8 @@ try:
 except OSError as e:
     sys.exit("Failed to create {}: {}".format(feed_dir, str(e)))
 
+expires = config.get('expires', 0)
+
 # Process the comics that we read from the config
 images_processed = {}
 for entry in config.get('comics', []):
@@ -196,3 +200,22 @@ for entry in config.get('comics', []):
     feed_path = os.path.join(feed_dir, "{}.xml".format(slug))
     with open(feed_path, "w") as feed_file:
         feed_file.write(feed.rss())
+
+    if(expires > 0):
+        to_prune = []
+        candidates = glob.glob("{}/{}-*.gif".format(cache_dir, slug))
+        for img in candidates:
+            date = re.sub(r'\.gif$', '', img)  # Strip suffix
+            date = date.replace(slug, '')  # Strip slug
+            date = date.strip('-')  # Strip leading or trailing dashes
+            try:
+                date = datetime.datetime.strptime(date, "%Y-%m-%d").date()
+                delta = date - today
+                if(delta.days > expires):
+                    to_prune.append(img)
+            except ValueError:
+                print("WARNING: Unable to parse date from cache file: {}".format(img))
+
+        if(to_prune):
+            print("Pruning {} expired cache files for {}.".format(len(to_prune), slug))
+            print("To remove: {}".format(to_prune))
