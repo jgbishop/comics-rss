@@ -205,13 +205,15 @@ for entry in config.get('comics', []):
         to_prune = []
         candidates = glob.glob("{}/{}-*.gif".format(cache_dir, slug))
         for img in candidates:
-            date = re.sub(r'\.gif$', '', img)  # Strip suffix
-            date = date.replace(slug, '')  # Strip slug
-            date = date.strip('-')  # Strip leading or trailing dashes
+            match = re.search(r'(\d{4}-\d{2}-\d{2})', img)
+            if(match.group is None):
+                print("WARNING: Unable to locate date string in file: {}".format(img))
+                continue
+
             try:
-                date = datetime.datetime.strptime(date, "%Y-%m-%d").date()
-                delta = date - today
-                if(delta.days > expires):
+                date = datetime.strptime(match.group(0), "%Y-%m-%d").date()
+                delta = today - date
+                if(delta.days >= expires):
                     to_prune.append(img)
             except ValueError:
                 print("WARNING: Unable to parse date from cache file: {}".format(img))
