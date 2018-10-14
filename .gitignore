@@ -1,4 +1,5 @@
 cache/
 old/
+venv/
 *.xml
 rss-sources.json
