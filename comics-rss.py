@@ -220,4 +220,10 @@ for entry in config.get('comics', []):
 
         if(to_prune):
             print("Pruning {} expired cache files for {}.".format(len(to_prune), slug))
-            print("To remove: {}".format(to_prune))
+            for f in sorted(to_prune):
+                print(" - Removing {}".format(f))
+                try:
+                    os.remove(f)
+                except OSError:
+                    raise
+                    sys.exit(1)
