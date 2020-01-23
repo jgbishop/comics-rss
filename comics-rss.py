@@ -1,20 +1,22 @@
+# Core libraries
 import argparse
 import calendar
 import glob
 import json
 import os
-import pytz
 import re
-import rfeed
 import sys
-
-from bs4 import BeautifulSoup
 from contextlib import closing
 from datetime import date, datetime, timedelta
+from urllib.request import urlopen
+
+# Third-party libraries
+import pytz
+import rfeed
+from bs4 import BeautifulSoup
 from requests import get
 from requests.exceptions import RequestException
 from slugify import slugify
-from urllib.request import urlopen
 
 
 MIN_PYTHON = (3, 4)
@@ -38,7 +40,11 @@ def get_image(url, filename):
 
     html = BeautifulSoup(raw_html, 'lxml')
     title = html.select_one('meta[name=title]')
-    short_link = html.select_one('meta[property=og:image]')
+    short_link = html.select_one("meta[property='og:image']")
+
+    if(not short_link):
+        print("  SKIPPING: No short link found!")
+        return None
 
     response = urlopen(short_link['content'])
     data_response = get(response.url)
@@ -160,7 +166,9 @@ for entry in config.get('comics', []):
         # Check to see if we need to fetch the image
         img_path = os.path.join(cache_dir, img_filename)
         if not os.path.isfile(img_path):
-            get_image(url, img_path)
+            result = get_image(url, img_path)
+            if result is None:
+                continue
 
         title = "{} comic strip for {}".format(
             entry.get("name"), the_date.strftime("%B %d, %Y")
