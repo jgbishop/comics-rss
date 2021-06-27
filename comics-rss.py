@@ -20,13 +20,13 @@ from slugify import slugify
 
 
 MIN_PYTHON = (3, 4)
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 
 
 def get_image(url, filename):
     print(" - Attempting to get image: {}".format(filename))
     try:
-        with closing(get(url, stream=True)) as resp:
+        with closing(get(url, stream=True, verify=False)) as resp:
             if resp.status_code == 200:
                 raw_html = resp.content
             else:
