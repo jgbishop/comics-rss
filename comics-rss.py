@@ -30,7 +30,7 @@ def get_image(url, filename):
             if resp.status_code == 200:
                 raw_html = resp.content
             else:
-                print("ERROR: Bad response getting page ()".format(
+                print("ERROR: Bad response getting page ({})".format(
                     resp.status_code
                 ))
                 return None
@@ -57,7 +57,7 @@ def get_image(url, filename):
             'title': title
         }
     else:
-        print("ERROR: Bad response downloading image ()".format(
+        print("ERROR: Bad response downloading image ({})".format(
             data_response.status_code)
         )
         return None
@@ -213,6 +213,9 @@ for entry in config.get('comics', []):
         to_prune = []
         candidates = glob.glob("{}/{}-*.gif".format(cache_dir, slug))
         for img in candidates:
+            if('valiant' in img):
+                continue
+
             match = re.search(r'(\d{4}-\d{2}-\d{2})', img)
             if(match.group is None):
                 print("WARNING: Unable to locate date string in file: {}".format(img))
