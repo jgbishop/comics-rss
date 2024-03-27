@@ -1,17 +1,14 @@
-# Core libraries
+# ruff: noqa: T201
 import argparse
 import calendar
-import glob
 import json
-import os
 import re
 import sys
 from contextlib import closing
-from datetime import date, datetime, timedelta
-from urllib.request import urlopen
+from datetime import date, datetime, timedelta, UTC
+from http import HTTPStatus
+from pathlib import Path
 
-# Third-party libraries
-import pytz
 import rfeed
 from bs4 import BeautifulSoup
 from requests import get
@@ -19,48 +16,44 @@ from requests.exceptions import RequestException
 from slugify import slugify
 
 
-MIN_PYTHON = (3, 4)
+MIN_PYTHON = (3, 8)
 VERSION = "1.1.0"
 
 
 def get_image(url, filename):
-    print(" - Attempting to get image: {}".format(filename))
+    print(f" - Attempting to get image: {filename}")
     try:
-        with closing(get(url, stream=True, verify=False)) as resp:
-            if resp.status_code == 200:
+        with closing(get(url, stream=True, timeout=10)) as resp:
+            if resp.status_code == HTTPStatus.OK:
                 raw_html = resp.content
             else:
-                print("ERROR: Bad response getting page ({})".format(
-                    resp.status_code
-                ))
+                print(f"ERROR: Bad response getting page ({resp.status_code})")
                 return None
     except RequestException as e:
-        print("ERROR: {}".format(e))
+        print(str(e))
         return None
 
-    html = BeautifulSoup(raw_html, 'lxml')
+    html = BeautifulSoup(raw_html, 'html.parser')
     title = html.select_one('meta[name=title]')
-    short_link = html.select_one("meta[property='og:image']")
+    short_link = html.find('meta', attrs={'property': 'og:image'})
+    print(f"{short_link=}")
 
-    if(not short_link):
-        print("  SKIPPING: No short link found!")
+    final_img_url = short_link['content']
+    print(f"{final_img_url=}")
+    if not final_img_url.startswith(("http:", "https:")):
+        print(f"Bad image URL ({final_img_url})")
         return None
 
-    response = urlopen(short_link['content'])
-    data_response = get(response.url)
-    if data_response.status_code == 200:
-        print("   Got success response code; writing image content")
-        output = open(filename, "wb")
-        output.write(data_response.content)
-        output.close()
-        return {
-            'title': title
-        }
-    else:
-        print("ERROR: Bad response downloading image ({})".format(
-            data_response.status_code)
-        )
+    data_response = get(final_img_url, timeout=10)
+    if data_response.status_code != HTTPStatus.OK:
+        print(f"ERROR: Bad response downloading image ({data_response.status_code})")
         return None
+
+    print("   Got success response code; writing image content")
+    with filename.open("wb") as file:
+        file.write(data_response.content)
+
+    return {'title': title}
 
 
 if sys.version_info < MIN_PYTHON:
@@ -74,58 +67,55 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--file', default='rss-sources.json')
 args = parser.parse_args()
 
-days = dict(zip(calendar.day_name, range(7)))
+days = dict(zip(calendar.day_name, range(7), strict=True))
 
-cwd = os.getcwd()
+cwd = Path.cwd()
 today = date.today()
 
 # Load our config file
-with open(args.file) as f:
+with Path(args.file).open(encoding='utf-8') as f:
     config = json.load(f)
 
 # Make sure we have everything we expect
 errors = []
 for x in ('feed_dir', 'feed_url'):
-    if not config.get(x, ""):
-        errors.append("ERROR: Missing the {} configuration directive".format(x))
+    if not config.get(x):
+        errors.append(f"ERROR: Missing the {x} configuration directive")
     else:
         # Strip trailing slashes from file system paths and URLs
         config[x] = config[x].rstrip('/')
 
 if errors:
-    sys.exit("\n".join(errors))
+    sys.exit('\n'.join(errors))
 
 # Setup the cache paths and URLs
 if not config.get('cache_dir', ''):
-    config['cache_dir'] = "{}/cache".format(config['feed_dir'])
+    config['cache_dir'] = f"{config['feed_dir']}/cache"
 elif config.get('cache_dir').endswith('/'):
     config['cache_dir'] = config['cache_dir'].rstrip('/')
 
 if not config.get('cache_url', ''):
-    config['cache_url'] = "{}/cache".format(config['feed_url'])
+    config['cache_url'] = f"{config['feed_url']}/cache"
 elif config.get('cache_url').endswith('/'):
     config['cache_url'] = config['cache_url'].rstrip('/')
 
 # Create the cache directory
-cache_dir = config.get('cache_dir')
-
-if not cache_dir.startswith('/'):
-    cache_dir = os.path.join(cwd, cache_dir)
+raw_cache_dir = config.get('cache_dir')
+cache_dir = Path(raw_cache_dir) if raw_cache_dir.startswith('/') else cwd.joinpath(raw_cache_dir)
 
 try:
-    os.makedirs(cache_dir, exist_ok=True)
+    cache_dir.mkdir(exist_ok=True, parents=True)
 except OSError as e:
-    sys.exit("Failed to create {}: {}".format(cache_dir, str(e)))
+    sys.exit(f"Failed to create {cache_dir}: {e}")
 
 # Create the feeds directory (in case it's different)
-feed_dir = config.get('feed_dir')
-if not feed_dir.startswith('/'):
-    feed_dir = os.path.join(cwd, feed_dir)
+raw_feed_dir = config.get('feed_dir')
+feed_dir = Path(raw_feed_dir) if raw_feed_dir.startswith('/') else cwd.joinpath(raw_feed_dir)
 
 try:
-    os.makedirs(feed_dir, exist_ok=True)
+    feed_dir.mkdir(exist_ok=True, parents=True)
 except OSError as e:
-    sys.exit("Failed to create {}: {}".format(feed_dir, str(e)))
+    sys.exit(f"Failed to create {feed_dir}: {e}")
 
 expires = config.get('expires', 0)
 
@@ -136,11 +126,9 @@ for entry in config.get('comics', []):
         print("WARNING: Skipping comics entry with no name field")
         continue
 
-    slug = entry.get('slug', '')
-    if not slug:
-        slug = slugify(entry.get('name'))
+    slug = entry.get('slug', '') or slugify(entry.get('name'))
 
-    print("Processing comic: {}".format(slug))
+    print(f"Processing comic: {slug}")
     images_processed.setdefault(slug, set())
     item_list = []
 
@@ -156,85 +144,71 @@ for entry in config.get('comics', []):
         if schedule and the_date.weekday() not in schedule_weekdays:
             continue
 
-        img_filename = "{}-{}.gif".format(slug, the_date.isoformat())
+        img_filename = f"{slug}-{the_date.isoformat()}.jpeg"
         images_processed[slug].add(img_filename)
 
-        url = "{}/{}/{}".format(
-            root_url, slug, the_date.isoformat()
-        )
+        url = f"{root_url}/{slug}/{the_date.isoformat()}"
 
         # Check to see if we need to fetch the image
-        img_path = os.path.join(cache_dir, img_filename)
-        if not os.path.isfile(img_path):
-            result = get_image(url, img_path)
-            if result is None:
-                continue
+        img_path = cache_dir.joinpath(img_filename)
+        if not img_path.is_file():
+            get_image(url, img_path)
 
-        title = "{} comic strip for {}".format(
-            entry.get("name"), the_date.strftime("%B %d, %Y")
-        )
+        title = f"{entry.get('name')} comic strip for {the_date.strftime('%B %d, %Y')}"
 
-        img_url = "{}/{}".format(config.get("cache_url"), img_filename)
-        clines = []
-        clines.append('<p><img src="{}" alt="{}"></p>'.format(img_url, title))
-        clines.append('<p>')
-        clines.append('    <a href="{}">View on King Comics</a> -'.format(url))
-        clines.append('    <a href="{}">GitHub Project</a>'.format(github_url))
-        clines.append('</p>')
+        img_url = f"{config.get('cache_url')}/{img_filename}"
+        clines = [
+            f'<p><img src="{img_url}" alt="{title}"></p>',
+            '<p>',
+            f'    <a href="{url}">View on King Comics</a> - ',
+            f'    <a href="{github_url}">Generated by comics-rss on GitHub</a>',
+            '</p>',
+        ]
 
         pubtime = datetime.combine(the_date, datetime.min.time())
-        pubtime = pubtime.replace(tzinfo=pytz.UTC)
+        pubtime = pubtime.replace(tzinfo=UTC)
 
-        item = rfeed.Item(
-            title=title,
-            link=url,
-            description='\n'.join(clines),
-            guid=rfeed.Guid(url),
-            pubDate=pubtime
-        )
+        item = rfeed.Item(title=title, link=url, description='\n'.join(clines),
+                          guid=rfeed.Guid(url), pubDate=pubtime)
         item_list.append(item)
 
     # Start building the feed
     feed = rfeed.Feed(
         title=entry.get('name'),
-        link="{}/{}".format(root_url, slug),
-        description="RSS feed for {}".format(entry.get('name')),
+        link=f"{root_url}/{slug}",
+        description=f"RSS feed for {entry.get('name')}",
         language='en-US',
         lastBuildDate=datetime.now(),
         items=item_list,
-        generator="comics-rss.py ({})".format(github_url),
+        generator=f"comics-rss.py ({github_url})",
     )
 
-    feed_path = os.path.join(feed_dir, "{}.xml".format(slug))
-    with open(feed_path, "w") as feed_file:
+    feed_path = feed_dir.joinpath(f'{slug}.xml')
+    with feed_path.open('w') as feed_file:
         feed_file.write(feed.rss())
 
-    if(expires > 0):
+    if expires > 0:
         to_prune = []
-        candidates = glob.glob("{}/{}-*.gif".format(cache_dir, slug))
+        candidates = cache_dir.glob(f"{slug}-*.jpeg")
         for img in candidates:
-            if('valiant' in img):
-                continue
-
-            match = re.search(r'(\d{4}-\d{2}-\d{2})', img)
-            if(match.group is None):
-                print("WARNING: Unable to locate date string in file: {}".format(img))
+            match = re.search(r'(\d{4}-\d{2}-\d{2})', str(img))
+            if match.group is None:
+                print(f"WARNING: Unable to locate date string in file: {img}")
                 continue
 
             try:
                 date = datetime.strptime(match.group(0), "%Y-%m-%d").date()
                 delta = today - date
-                if(delta.days >= expires):
+                if delta.days >= expires:
                     to_prune.append(img)
             except ValueError:
-                print("WARNING: Unable to parse date from cache file: {}".format(img))
+                print(f"WARNING: Unable to parse date from cache file: {img}")
 
-        if(to_prune):
-            print("Pruning {} expired cache files for {}.".format(len(to_prune), slug))
+        if to_prune:
+            print(f"Pruning {len(to_prune)} expired cache file(s) for {slug}.")
             for f in sorted(to_prune):
-                print(" - Removing {}".format(f))
+                print(f" - Removing {f}")
                 try:
-                    os.remove(f)
-                except OSError:
-                    raise
-                    sys.exit(1)
+                    f.unlink(missing_ok=True)
+                except OSError as e:
+                    sys.exit(str(e))
