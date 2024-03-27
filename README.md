@@ -1,18 +1,21 @@
 # RSS Feed Generator for King Features
 
 This project allows users to generate RSS feeds for the comics of their choice
-at the [King Features](http://kingfeatures.com/) website (which does not
-provide such feeds).
+at the [King Features](http://kingfeatures.com/) website (which stupidly does
+not provide such feeds).
 
 ## Requirements
 
 This is a Python 3 script which relies on the following third-party libraries:
 
 * BeautifulSoup
-* pytz
 * requests
 * rfeed
 * slugify
+
+A _requirements.txt_ file has been included to make installing these easier.
+This document will assume that all subsequent commands are issued within the
+environment containing these dependencies.
 
 ## Installation
 
