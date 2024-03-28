@@ -36,10 +36,8 @@ def get_image(url, filename):
     html = BeautifulSoup(raw_html, 'html.parser')
     title = html.select_one('meta[name=title]')
     short_link = html.find('meta', attrs={'property': 'og:image'})
-    print(f"{short_link=}")
 
     final_img_url = short_link['content']
-    print(f"{final_img_url=}")
     if not final_img_url.startswith(("http:", "https:")):
         print(f"Bad image URL ({final_img_url})")
         return None
