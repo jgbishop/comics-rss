@@ -8,6 +8,7 @@ from contextlib import closing
 from datetime import date, datetime, timedelta, UTC
 from http import HTTPStatus
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import rfeed
 from bs4 import BeautifulSoup
@@ -16,14 +17,46 @@ from requests.exceptions import RequestException
 from slugify import slugify
 
 
+EST = ZoneInfo("America/New_York")
 MIN_PYTHON = (3, 8)
 VERSION = "1.1.0"
 
 
-def get_image(url, filename):
-    print(f" - Attempting to get image: {filename}")
+def check_target_date(date_as_string):
+    today = datetime.now(tz=EST).date()
+
     try:
-        with closing(get(url, stream=True, timeout=10)) as resp:
+        target_date = datetime.strptime(date_as_string, "%Y-%m-%d").astimezone(EST).date()
+        if target_date != today:
+            print(f"Target date does not match expected date: {target_date} vs {today}")
+            return False
+
+        return True
+    except ValueError:
+        print(f"Unable to locate date in comics page URL: {url}")
+        return False
+
+
+def get_image(url, filename):
+    """
+    Obtains the requested image.
+
+    Args
+        url: The URL to the comics webpage that we need to parse
+        filename: The filename we will write the resulting image to
+    """
+
+    match = re.search(r'(\d{4}-\d{2}-\d{2})', url)
+    if not match.group:
+        print(f"Unexpected comics page URL: {url}")
+        return None
+
+    if not check_target_date(match.group(0)):
+        return None
+
+    print(f" - Scraping comic URL: {url}")
+    try:
+        with closing(get(url, stream=True, timeout=15)) as resp:
             if resp.status_code == HTTPStatus.OK:
                 raw_html = resp.content
             else:
@@ -42,7 +75,12 @@ def get_image(url, filename):
         print(f"Bad image URL ({final_img_url})")
         return None
 
-    data_response = get(final_img_url, timeout=10)
+    match = re.search(r'(\d{4}-\d{2}-\d{2})', final_img_url)
+    if not check_target_date(match.group(0)):
+        return None
+
+    print(f"   Accessing image URL: {final_img_url}")
+    data_response = get(final_img_url, timeout=15)
     if data_response.status_code != HTTPStatus.OK:
         print(f"ERROR: Bad response downloading image ({data_response.status_code})")
         return None
@@ -68,7 +106,7 @@ args = parser.parse_args()
 days = dict(zip(calendar.day_name, range(7), strict=True))
 
 cwd = Path.cwd()
-today = date.today()
+today = datetime.now(tz=EST).date()
 
 # Load our config file
 with Path(args.file).open(encoding='utf-8') as f:
@@ -176,7 +214,7 @@ for entry in config.get('comics', []):
         link=f"{root_url}/{slug}",
         description=f"RSS feed for {entry.get('name')}",
         language='en-US',
-        lastBuildDate=datetime.now(),
+        lastBuildDate=datetime.now(tz=EST),
         items=item_list,
         generator=f"comics-rss.py ({github_url})",
     )
@@ -195,7 +233,7 @@ for entry in config.get('comics', []):
                 continue
 
             try:
-                date = datetime.strptime(match.group(0), "%Y-%m-%d").date()
+                date = datetime.strptime(match.group(0), "%Y-%m-%d").astimezone(EST).date()
                 delta = today - date
                 if delta.days >= expires:
                     to_prune.append(img)
