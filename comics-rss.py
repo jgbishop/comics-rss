@@ -22,19 +22,24 @@ MIN_PYTHON = (3, 8)
 VERSION = "1.1.0"
 
 
-def check_target_date(date_as_string):
-    today = datetime.now(tz=EST).date()
+def check_target_date(comic_url_date, img_url_date):
+    try:
+        comic_date = datetime.strptime(comic_url_date, "%Y-%m-%d").astimezone(EST).date()
+    except ValueError:
+        print(f"Invalid comics URL date: {comic_url_date}")
+        return False
 
     try:
-        target_date = datetime.strptime(date_as_string, "%Y-%m-%d").astimezone(EST).date()
-        if target_date != today:
-            print(f"Target date does not match expected date: {target_date} vs {today}")
-            return False
-
-        return True
+        img_date = datetime.strptime(img_url_date, "%Y-%m-%d").astimezone(EST).date()
     except ValueError:
-        print(f"Unable to locate date in comics page URL: {url}")
+        print(f"Invalid image file date: {img_url_date}")
         return False
+
+    if comic_date != img_date:
+        print(f"Image date does not match comic date: {img_date} vs {comic_date}")
+        return False
+
+    return True
 
 
 def get_image(url, filename):
@@ -45,14 +50,15 @@ def get_image(url, filename):
         url: The URL to the comics webpage that we need to parse
         filename: The filename we will write the resulting image to
     """
+    print(f"{url=}")
+    print(f"{filename=}")
 
     match = re.search(r'(\d{4}-\d{2}-\d{2})', url)
     if not match.group:
         print(f"Unexpected comics page URL: {url}")
         return None
 
-    if not check_target_date(match.group(0)):
-        return None
+    comics_url_date = match.group(0)
 
     print(f" - Scraping comic URL: {url}")
     try:
@@ -76,7 +82,9 @@ def get_image(url, filename):
         return None
 
     match = re.search(r'(\d{4}-\d{2}-\d{2})', final_img_url)
-    if not check_target_date(match.group(0)):
+    image_url_date = match.group(0)
+
+    if not check_target_date(comics_url_date, image_url_date):
         return None
 
     print(f"   Accessing image URL: {final_img_url}")
