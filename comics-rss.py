@@ -19,27 +19,7 @@ from slugify import slugify
 
 EST = ZoneInfo("America/New_York")
 MIN_PYTHON = (3, 8)
-VERSION = "1.1.0"
-
-
-def check_target_date(comic_url_date, img_url_date):
-    try:
-        comic_date = datetime.strptime(comic_url_date, "%Y-%m-%d").astimezone(EST).date()
-    except ValueError:
-        print(f"Invalid comics URL date: {comic_url_date}")
-        return False
-
-    try:
-        img_date = datetime.strptime(img_url_date, "%Y-%m-%d").astimezone(EST).date()
-    except ValueError:
-        print(f"Invalid image file date: {img_url_date}")
-        return False
-
-    if comic_date != img_date:
-        print(f"Image date does not match comic date: {img_date} vs {comic_date}")
-        return False
-
-    return True
+VERSION = "1.2.0"
 
 
 def get_image(url, filename):
@@ -79,12 +59,6 @@ def get_image(url, filename):
     final_img_url = short_link['content']
     if not final_img_url.startswith(("http:", "https:")):
         print(f"Bad image URL ({final_img_url})")
-        return None
-
-    match = re.search(r'(\d{4}-\d{2}-\d{2})', final_img_url)
-    image_url_date = match.group(0)
-
-    if not check_target_date(comics_url_date, image_url_date):
         return None
 
     print(f"   Accessing image URL: {final_img_url}")
